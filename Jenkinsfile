@@ -2,18 +2,17 @@ def COLOR_MAP = [
     'SUCCESS': 'good', 
     'FAILURE': 'danger',
 ]
-
 pipeline {
     agent any
     tools {
         maven "MAVEN3"
         jdk "OracleJDK8"
     }
-
+    
     environment {
         SNAP_REPO = 'vprofile-snapshot'
 		NEXUS_USER = 'admin'
-		NEXUS_PASS = 'nexusadmin'
+		NEXUS_PASS = 'admin123'
 		RELEASE_REPO = 'vprofile-release'
 		CENTRAL_REPO = 'vpro-maven-central'
 		NEXUSIP = '10.0.12.76'
@@ -25,13 +24,13 @@ pipeline {
     }
 
     stages {
-        stage ('build'){
+        stage('Build'){
             steps {
                 sh 'mvn -s settings.xml -DskipTests install'
             }
             post {
                 success {
-                    echo "Now Archiving"
+                    echo "Now Archiving."
                     archiveArtifacts artifacts: '**/*.war'
                 }
             }
@@ -39,17 +38,17 @@ pipeline {
 
         stage('Test'){
             steps {
-                sh 'mvn test'
+                sh 'mvn -s settings.xml test'
             }
+
         }
 
         stage('Checkstyle Analysis'){
             steps {
-                sh 'mvn checkstyle:checkstyle'
+                sh 'mvn -s settings.xml checkstyle:checkstyle'
             }
-
         }
-        
+
         stage('Sonar Analysis') {
             environment {
                 scannerHome = tool "${SONARSCANNER}"
@@ -68,7 +67,7 @@ pipeline {
             }
         }
 
-         stage("Quality Gate") {
+        stage("Quality Gate") {
             steps {
                 timeout(time: 10, unit: 'MINUTES') {
                     // Parameter indicates whether to set pipeline to UNSTABLE if Quality Gate fails
@@ -77,6 +76,7 @@ pipeline {
                 }
             }
         }
+
         stage("UploadArtifact"){
             steps{
                 nexusArtifactUploader(
@@ -97,14 +97,13 @@ pipeline {
             }
         }
 
-        post {
+    }
+    post {
         always {
             echo 'Slack Notifications.'
             slackSend channel: '#jenkinscicd',
                 color: COLOR_MAP[currentBuild.currentResult],
                 message: "*${currentBuild.currentResult}:* Job ${env.JOB_NAME} build ${env.BUILD_NUMBER} \n More info at: ${env.BUILD_URL}"
         }
-
-        
     }
 }
