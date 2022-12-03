@@ -26,7 +26,7 @@ pipeline {
     stages {
         stage('Build'){
             steps {
-                sh ''mvn -s -DskipTests install'
+                sh 'mvn -DskipTests install'
             }
             post {
                 success {
